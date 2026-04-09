@@ -1,0 +1,35 @@
+services:
+  mongo1:
+    image: mongodb/mongodb-community-server:latest
+    command: mongod --port 30001
+    container_name: UserDB
+    ports:
+      - "30001:30001"
+    volumes:
+      - mongo1_data:/data/db
+
+  mongo2:
+    image: mongodb/mongodb-community-server:latest
+    command: mongod --port 30002
+    container_name: MessageDB
+    ports:
+      - "30002:30002"
+    volumes:
+      - mongo2_data:/data/db      
+
+
+  userservice:
+    build: ./userservice
+    container_name: userservice
+    ports:
+      - "3001:3001"
+    depends_on:
+      - mongo1
+
+
+
+
+volumes:
+  mongo1_data:
+  mongo2_data:
+  redis_data:
