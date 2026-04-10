@@ -1,35 +1,39 @@
 services:
-  mongo1:
-    image: mongodb/mongodb-community-server:latest
-    command: mongod --port 30001
-    container_name: UserDB
+  postgres:
+    image: postgres:16-alpine
+    container_name: auth_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DATABASE}
     ports:
-      - "30001:30001"
+      - "${PG_DBPORT}:${PG_DBPORT}"
     volumes:
-      - mongo1_data:/data/db
-
-  mongo2:
-    image: mongodb/mongodb-community-server:latest
-    command: mongod --port 30002
-    container_name: MessageDB
-    ports:
-      - "30002:30002"
-    volumes:
-      - mongo2_data:/data/db      
-
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5     
 
   userservice:
     build: ./userservice
     container_name: userservice
+    env_file:
+      - ./userservice/.env
+    environment:
+      PG_HOST: postgres
     ports:
       - "3001:3001"
     depends_on:
-      - mongo1
-
-
-
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
 volumes:
-  mongo1_data:
-  mongo2_data:
-  redis_data:
+  postgres_data:

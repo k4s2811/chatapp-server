@@ -2,12 +2,14 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const ENV_VARS = {
+  PORT: process.env.PORT,
+  NODE_ENV: process.env.NODE_ENV,
   DB: {
-    PORT: process.env.PORT || 3001,
-    USER: process.env.USER,
-    HOST: process.env.HOST,
-    DATABASE: process.env.DATABASE,
-    PASSWORD: process.env.PASSWORD,
+    PORT: process.env.PG_DBPORT,
+    USER: process.env.PG_USER,
+    HOST: process.env.PG_HOST,
+    DATABASE: process.env.PG_DATABASE,
+    PASSWORD: process.env.PG_PASSWORD,
     ENV: process.env.NODE_ENV || 'development',
   },
 

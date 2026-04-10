@@ -1,71 +1,35 @@
-import express from 'express';
-import AuthController from '../controllers/authController.js';
-import { authenticate } from '../middleware/auth.js';
-import { authRateLimiter, passwordResetRateLimiter } from '../middleware/security.js';
-import { validate } from '../utils/validators.js';
-import {
-  registerSchema,
-  loginSchema,
-  emailSchema,
-  resetPasswordSchema,
-  verifyTokenSchema
-} from '../utils/validators.js';
-
+const express = require('express');
 const router = express.Router();
+const { authenticate } = require('../middlewares/auth.middleware');
+const {
+  validate,
+  registerRules,
+  loginRules,
+  changePasswordRules,
+  resetPasswordRules,
+} = require('../middlewares/validate.middleware');
+const {
+  register,
+  login,
+  refresh,
+  logout,
+  logoutAll,
+  me,
+  verifyEmail,
+  forgotPassword,
+  resetPassword,
+  changePassword,
+} = require('../controllers/auth.controller');
 
-router.post(
-  '/register',
-  authRateLimiter,
-  validate(registerSchema),
-  AuthController.register
-);
+router.post('/register', registerRules, validate, register);
+router.post('/login', loginRules, validate, login);
+router.post('/refresh', refresh);
+router.post('/logout', logout);
+router.post('/logout-all', authenticate, logoutAll);
+router.get('/me', authenticate, me);
+router.post('/verify-email', verifyEmail);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPasswordRules, validate, resetPassword);
+router.post('/change-password', authenticate, changePasswordRules, validate, changePassword);
 
-router.post(
-  '/login',
-  authRateLimiter,
-  validate(loginSchema),
-  AuthController.login
-);
-
-router.post(
-  '/refresh-token',
-  AuthController.refreshToken
-);
-
-router.post(
-  '/logout',
-  AuthController.logout
-);
-
-router.post(
-  '/verify-email',
-  validate(verifyTokenSchema),
-  AuthController.verifyEmail
-);
-
-router.post(
-  '/resend-verification',
-  validate(emailSchema),
-  AuthController.resendVerificationEmail
-);
-
-router.post(
-  '/request-password-reset',
-  passwordResetRateLimiter,
-  validate(emailSchema),
-  AuthController.requestPasswordReset
-);
-
-router.post(
-  '/reset-password',
-  validate(resetPasswordSchema),
-  AuthController.resetPassword
-);
-
-router.get(
-  '/profile',
-  authenticate,
-  AuthController.getProfile
-);
-
-export default router;
+module.exports = router;

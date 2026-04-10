@@ -8,11 +8,11 @@ A real-time chat backend supporting **one-to-one** and **group messaging** via W
 
 ### 👤 User Service
 
-Base URL: `/v1/user`
+Base URL: `/brr/user`
 
 | Method | Endpoint    | Payload                                                    | Description          |
 |--------|-------------|------------------------------------------------------------|----------------------|
-| `POST` | `/register` | `userName`, `email/phone`, `password`, `dob`, `profile_pic` | Register a new user  |
+| `POST` | `/signup` | `userName`, `email/phone`, `password`, `dob`, `profile_pic` | Register a new user  |
 | `POST` | `/signin`   | `email/phone`, `password`                                  | Sign in              |
 | `POST` | `/signout`  | `email/phone`, `password`                                  | Sign out             |
 | `POST` | `/update`   | `userName`, `email/phone`, `password`, `dob`, `profile_pic` | Update user profile  |
@@ -22,7 +22,7 @@ Base URL: `/v1/user`
 
 ### 💬 One-to-One Chat
 
-Base URL: `/v1`
+Base URL: `/brr`
 
 | Method | Endpoint          | Payload                            | Description                        |
 |--------|-------------------|------------------------------------|------------------------------------|
@@ -34,7 +34,7 @@ Base URL: `/v1`
 
 ### 👥 Group Chat
 
-Base URL: `/v1/group`
+Base URL: `/brr/group`
 
 | Method | Endpoint         | Payload                                                 | Description                   |
 |--------|------------------|---------------------------------------------------------|-------------------------------|

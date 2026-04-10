@@ -1,18 +1,31 @@
 import jwt from "jsonwebtoken"
-import { ENV_VARS } from "../envVars.js"
+import { v4 as uuidv4 } from "uuid";
+import { ENV_VARS } from "../config/envVars.js"
 
-export const generateAccessToken = (user) => {
-    return jwt.sign(
-        { userId: user._id, role: user.role },
-        ENV_VARS.ACCESS_SECRET,
-        { expiresIn: ENV_VARS.ACCESS_TOKEN_EXPIRES }
-    );
+export const generateAccessToken = (payload) => {
+    return jwt.sign(payload, ENV_VARS.JWT.ACCESS_SECRET, {
+        expiresIn: ENV_VARS.JWT.ACCESS_TOKEN_EXPIRES,
+        issuer: 'auth-backend',
+        jwtid: uuidv4(),
+    });
 };
 
-export const generateRefreshToken = (user) => {
-    return jwt.sign(
-        { userId: user._id },
-        ENV_VARS.REFRESH_SECRET,
-        { expiresIn: ENV_VARS.REFRESH_TOKEN_EXPIRES }
-    );
+export const generateRefreshToken = (payload) => {
+    return jwt.sign(payload, ENV_VARS.JWT.REFRESH_SECRET, {
+        expiresIn: ENV_VARS.JWT.REFRESH_TOKEN_EXPIRES,
+        issuer: 'auth-backend',
+        jwtid: uuidv4(),
+    });
+};
+
+export const verifyAccessToken = (token) => {
+    return jwt.verify(token, ENV_VARS.JWT.ACCESS_SECRET, { issuer: 'auth-backend' });
+};
+
+export const verifyRefreshToken = (token) => {
+    return jwt.verify(token, ENV_VARS.JWT.REFRESH_SECRET, { issuer: 'auth-backend' });
+};
+
+export const decodeToken = (token) => {
+    return jwt.decode(token);
 };
