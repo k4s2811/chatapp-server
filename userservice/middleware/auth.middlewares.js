@@ -12,7 +12,7 @@ export async function authenticate(req, res, next) {
 
     // Verify user still exists and is active
     const result = await query(
-        'SELECT id, email, username, role, is_active FROM users WHERE id = $1',
+        'SELECT id, email, name, role, is_active FROM users WHERE id = $1',
         [decoded.sub]
     );
 

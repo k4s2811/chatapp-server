@@ -60,7 +60,7 @@ export async function signup(req, res) {
 
     await audit(user.id, 'SIGNUP', req);
 
-    res.cookie(ENV_VARS.NODE_ENV, refreshToken, {
+    res.cookie('refreshToken', refreshToken, {
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days in MS
         httpOnly: true, // prevent XSS attacks cross-site scripting attacks, make it not be accessed by JS
         sameSite: "strict", // CSRF attacks cross-site request forgery attacks
@@ -127,7 +127,7 @@ export async function login(req, res) {
 
     await audit(user.id, 'LOGIN', req);
 
-    res.cookie(ENV_VARS.NODE_ENV, refreshToken, {
+    res.cookie('refreshToken', refreshToken, {
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days in MS
         httpOnly: true, // prevent XSS attacks cross-site scripting attacks, make it not be accessed by JS
         sameSite: "strict", // CSRF attacks cross-site request forgery attacks
@@ -211,7 +211,12 @@ export async function refresh(req, res) {
         maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 
-    res.json({ accessToken: newAccessToken }, 'Token refreshed');
+    res.json({
+        success: true,
+        data: {
+            accessToken: newAccessToken
+        }
+    }, 'Token refreshed');
 
 };
 
@@ -234,11 +239,15 @@ export async function changePassword(req, res) {
 
 export async function me(req, res) {
     const result = await query(
-        `SELECT id, email, username, role, is_active, is_verified, created_at, updated_at
+        `SELECT id, email, name, role, is_active, is_verified, created_at, updated_at
        FROM users WHERE id = $1`,
         [req.user.id]
     );
-    res.json({ user: result.rows[0] });
+    const user = result.rows[0];
+    res.json({
+        success: true,
+        data: { user }
+    });
 };
 
 export async function setusername(req, res) {
