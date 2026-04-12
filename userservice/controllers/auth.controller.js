@@ -68,16 +68,18 @@ export async function signup(req, res) {
     });
 
     res.status(201).json({
-        accessToken,
         success: true,
-        user: {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            is_verified: user.is_verified,
+        data: {
+            accessToken,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                is_verified: user.is_verified,
+            },
         },
-    });
+    })
 
 };
 
@@ -134,16 +136,18 @@ export async function login(req, res) {
 
 
     res.status(201).json({
-        accessToken,
         success: true,
-        user: {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            is_verified: user.is_verified,
+        data: {
+            accessToken,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                is_verified: user.is_verified,
+            },
         },
-    });
+    })
 
 };
 
@@ -237,7 +241,7 @@ export async function me(req, res) {
     res.json({ user: result.rows[0] });
 };
 
-export async function setusername(req,res){
-    const {username} = req.body;
-    
+export async function setusername(req, res) {
+    const { username } = req.body;
+
 }
