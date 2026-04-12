@@ -14,7 +14,7 @@ const audit = async (userId, action, req, metadata = {}) => {
 };
 
 export async function signup(req, res) {
-    const { email, username, password } = req.body;
+    const { email, name, password } = req.body;
 
     //check if email already exists
     const existingEmail = await query(
@@ -30,10 +30,10 @@ export async function signup(req, res) {
 
     //save user in db
     const newUser = await query(
-        `INSERT INTO users (email, username, password) 
+        `INSERT INTO users (email, name, password) 
          VALUES ($1, $2, $3)
-         RETURNING id, email, username, role, is_active, is_verified, created_at`,
-        [email, username, hashedPassword]
+         RETURNING id, email, name, role, is_active, is_verified, created_at`,
+        [email, name, hashedPassword]
     );
     const user = newUser.rows[0];
 
@@ -72,7 +72,7 @@ export async function signup(req, res) {
         success: true,
         user: {
             id: user.id,
-            username: user.username,
+            name: user.name,
             email: user.email,
             role: user.role,
             is_verified: user.is_verified,
@@ -138,7 +138,7 @@ export async function login(req, res) {
         success: true,
         user: {
             id: user.id,
-            username: user.username,
+            name: user.name,
             email: user.email,
             role: user.role,
             is_verified: user.is_verified,
@@ -237,12 +237,7 @@ export async function me(req, res) {
     res.json({ user: result.rows[0] });
 };
 
-export async function authCheck(req, res) {
-    try {
-        console.log("req.user:", req.user);
-        res.status(200).json({ success: true, user: req.user });
-    } catch (error) {
-        console.log("Error in authCheck controller", error.message);
-        res.status(500).json({ success: false, message: "Internal server error" });
-    }
-};
+export async function setusername(req,res){
+    const {username} = req.body;
+    
+}

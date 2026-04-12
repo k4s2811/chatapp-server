@@ -13,10 +13,10 @@ export const registerRules = [
     .isEmail().withMessage('Valid email is required')
     .normalizeEmail()
     .isLength({ max: 255 }).withMessage('Email too long'),
-  body('username')
+  body('name')
     .trim()
-    .isLength({ min: 3, max: 50 }).withMessage('Username must be 3–50 characters')
-    .matches(/^[a-zA-Z0-9_]+$/).withMessage('Username can only contain letters, numbers, and underscores'),
+    .isLength({ min: 3, max: 50 }).withMessage('Name must be 3–50 characters')
+    .matches(/^[a-zA-Z0-9_ ]+$/).withMessage('Name can only contain letters, numbers, and underscores'),
   body('password')
     .isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
     .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
