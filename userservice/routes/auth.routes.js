@@ -19,12 +19,6 @@ router.get("/me", authenticate, me);
 
 router.post("/changepassword", authenticate, changePasswordRules, validate, changePassword);
 
-// router.post("/forgot-password", forgotPassword);
-
-// router.post("/reset-password", resetPassword);
-
 // router.post("/delete", deleteUser);
-
-// router.get("/authCheck", verifyAccessToken, authCheck);
 
 export default router;

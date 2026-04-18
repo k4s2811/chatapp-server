@@ -3,7 +3,6 @@ import crypto from 'crypto';
 import { query } from "../config/db.js";
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/token.js';
 import { ENV_VARS } from "../config/envVars.js";
-// import AuthService from '../services/auth.service.js';
 
 const audit = async (userId, action, req, metadata = {}) => {
     await query(
@@ -16,19 +15,17 @@ const audit = async (userId, action, req, metadata = {}) => {
 export async function signup(req, res) {
     const { email, name, password } = req.body;
 
-    //check if email already exists
     const existingEmail = await query(
         'SELECT id FROM users WHERE email = $1',
         [email]
     );
     if (existingEmail.rows.length) {
-        return error(res, 409, "Email already exists");
+        return res.status(409).json({ success: false, message: "Email already exists" });
     }
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    //save user in db
     const newUser = await query(
         `INSERT INTO users (email, name, password) 
          VALUES ($1, $2, $3)
@@ -37,20 +34,10 @@ export async function signup(req, res) {
     );
     const user = newUser.rows[0];
 
-    // Generate verification token
-
-    // const verifyToken = crypto.randomBytes(32).toString('hex');
-    // const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-    // await query(
-    //   `INSERT INTO verification_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)`,
-    //   [user.id, verifyToken, expiresAt]
-    // );
-
     const tokenPayload = { sub: user.id, role: user.role, email: user.email };
     const accessToken = generateAccessToken(tokenPayload);
     const refreshToken = generateRefreshToken({ sub: user.id });
 
-    // Store refresh token in DB (rotation-ready)
     const refreshExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     await query(
         `INSERT INTO refresh_tokens (user_id, token, expires_at, ip_address, user_agent)
@@ -61,9 +48,9 @@ export async function signup(req, res) {
     await audit(user.id, 'SIGNUP', req);
 
     res.cookie('refreshToken', refreshToken, {
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days in MS
-        httpOnly: true, // prevent XSS attacks cross-site scripting attacks, make it not be accessed by JS
-        sameSite: "strict", // CSRF attacks cross-site request forgery attacks
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        httpOnly: true,
+        sameSite: "strict",
         secure: ENV_VARS.NODE_ENV !== "production",
     });
 
@@ -97,7 +84,7 @@ export async function login(req, res) {
     );
     if (!result.rows.length) {
         await audit(null, 'LOGIN_FAILED', req, { email });
-        return error(res, 'Invalid credentials', 401);
+        return res.status(401).json({ success: false, message: "Invalid credentials" });
     }
     const user = result.rows[0];
 
@@ -105,7 +92,7 @@ export async function login(req, res) {
         return res.status(404).json({ success: false, message: "Invalid credentials" });
     }
     if (!user.is_active) {
-        return error(res, 'Account is disabled', 403);
+        return res.status(403).json({ success: false, message: "Account is disabled" });
     }
 
     const valid = await bcrypt.compare(password, user.password);
@@ -117,7 +104,6 @@ export async function login(req, res) {
     const accessToken = generateAccessToken(tokenPayload);
     const refreshToken = generateRefreshToken({ sub: user.id });
 
-    // Store refresh token in DB (rotation-ready)
     const refreshExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     await query(
         `INSERT INTO refresh_tokens (user_id, token, expires_at, ip_address, user_agent)
@@ -128,9 +114,9 @@ export async function login(req, res) {
     await audit(user.id, 'LOGIN', req);
 
     res.cookie('refreshToken', refreshToken, {
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days in MS
-        httpOnly: true, // prevent XSS attacks cross-site scripting attacks, make it not be accessed by JS
-        sameSite: "strict", // CSRF attacks cross-site request forgery attacks
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        httpOnly: true,
+        sameSite: "strict",
         secure: ENV_VARS.NODE_ENV !== "production",
     });
 
@@ -152,73 +138,55 @@ export async function login(req, res) {
 };
 
 export async function logout(req, res) {
-
     const token = req.cookies?.refreshToken || req.body?.refreshToken;
     if (token) {
         await query('UPDATE refresh_tokens SET revoked = TRUE WHERE token = $1', [token]);
-    }
-    if (req.user) {
-        await audit(req.user.id, 'LOGOUT', req);
+
+        try {
+            const decoded = verifyRefreshToken(token);
+            await audit(decoded.sub, 'LOGOUT', req);
+        } catch (err) {
+        }
     }
     res.clearCookie('refreshToken');
     res.json({ message: "Logged out" });
-
-};
+}
 
 export async function refresh(req, res) {
-    const token = req.cookies?.refreshToken || req.body?.refreshToken;
-    if (!token) return res.status(401).json({ message: "No refresh token" });
-    const decoded = verifyRefreshToken(token);
+    try {
+        const token = req.cookies?.refreshToken || req.body?.refreshToken;
+        if (!token) return res.status(401).json({ message: "No refresh token" });
 
-    // Check token in DB
-    const result = await query(
-        `SELECT rt.*, u.role, u.email, u.is_active
-           FROM refresh_tokens rt
-           JOIN users u ON u.id = rt.user_id
-           WHERE rt.token = $1 AND rt.revoked = FALSE AND rt.expires_at > NOW()`,
-        [token]
-    );
+        const decoded = verifyRefreshToken(token);
 
-    if (!result.rows.length) {
-        return res.status(403).json({ message: "Invalid refresh token" });
-    }
-    const record = result.rows[0];
-    if (!record.is_active) {
-        return res.status(403).json({ message: "Account is disabled" });
-    }
+        const result = await query(
+            `SELECT rt.*, u.role, u.email, u.is_active
+               FROM refresh_tokens rt
+               JOIN users u ON u.id = rt.user_id
+               WHERE rt.token = $1 AND rt.revoked = FALSE AND rt.expires_at > NOW()`,
+            [token]
+        );
 
-    // Rotate: revoke old, issue new
-    await query('UPDATE refresh_tokens SET revoked = TRUE WHERE token = $1', [token]);
-
-    const newRefreshToken = generateRefreshToken({ sub: record.user_id });
-    const newAccessToken = generateAccessToken({
-        sub: record.user_id,
-        role: record.role,
-        email: record.email,
-    });
-
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    await query(
-        `INSERT INTO refresh_tokens (user_id, token, expires_at, ip_address, user_agent)
-           VALUES ($1, $2, $3, $4, $5)`,
-        [record.user_id, newRefreshToken, expiresAt, req.ip, req.get('user-agent')]
-    );
-
-    res.cookie('refreshToken', newRefreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-    });
-
-    res.json({
-        success: true,
-        data: {
-            accessToken: newAccessToken
+        if (!result.rows.length) {
+            return res.status(403).json({ message: "Invalid refresh token" });
         }
-    }, 'Token refreshed');
 
-};
+        const record = result.rows[0];
+
+        const newAccessToken = generateAccessToken({
+            sub: record.user_id,
+            role: record.role,
+            email: record.email
+        });
+
+        res.json({
+            success: true,
+            data: { accessToken: newAccessToken }
+        });
+    } catch (err) {
+        return res.status(403).json({ success: false, message: "Refresh session expired" });
+    }
+}
 
 export async function changePassword(req, res) {
     const { currentPassword, newPassword } = req.body;
@@ -249,8 +217,3 @@ export async function me(req, res) {
         data: { user }
     });
 };
-
-export async function setusername(req, res) {
-    const { username } = req.body;
-
-}

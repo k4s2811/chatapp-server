@@ -19,8 +19,7 @@ export const registerRules = [
     .matches(/^[a-zA-Z0-9_ ]+$/).withMessage('Name can only contain letters, numbers, and underscores'),
   body('password')
     .isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
-    .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
-    .matches(/[a-z]/).withMessage('Password must contain at least one lowercase letter')
+    .matches(/[A-Za-z]/).withMessage('Password must contain at least one letter')
     .matches(/[0-9]/).withMessage('Password must contain at least one number'),
 ];
 
@@ -33,16 +32,14 @@ export const changePasswordRules = [
   body('currentPassword').notEmpty().withMessage('Current password is required'),
   body('newPassword')
     .isLength({ min: 6 }).withMessage('New password must be at least 6 characters')
-    .matches(/[A-Z]/).withMessage('Must contain uppercase letter')
-    .matches(/[a-z]/).withMessage('Must contain lowercase letter')
-    .matches(/[0-9]/).withMessage('Must contain number'),
+    .matches(/[A-Za-z]/).withMessage('Must contain at least one letter')
+    .matches(/[0-9]/).withMessage('Must contain at least one number'),
 ];
 
 export const resetPasswordRules = [
   body('token').notEmpty().withMessage('Reset token is required'),
   body('newPassword')
-    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
-    .matches(/[A-Z]/).withMessage('Must contain uppercase letter')
-    .matches(/[a-z]/).withMessage('Must contain lowercase letter')
-    .matches(/[0-9]/).withMessage('Must contain number'),
+    .isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+    .matches(/[A-Za-z]/).withMessage('Must contain at least one letter')
+    .matches(/[0-9]/).withMessage('Must contain at least one number'),
 ];

@@ -29,6 +29,11 @@ export const ENV_VARS = {
     FROM: process.env.EMAIL_FROM
   },
 
+  OAUTH: {
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET
+  },
+
   SECURITY: {
     cookieSecret: process.env.COOKIE_SECRET
   },
