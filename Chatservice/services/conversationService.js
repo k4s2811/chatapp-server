@@ -1,10 +1,6 @@
 import Conversation from "../models/ConversationDb.js";
 
-/**
- * Find or create a 1-to-1 conversation between two users.
- */
 export const findOrCreateDM = async (userIdA, userIdB) => {
-    // Look for existing DM between exactly these two users
     let conversation = await Conversation.findOne({
         isGroup: false,
         "participants.userId": { $all: [userIdA, userIdB] },
@@ -24,9 +20,6 @@ export const findOrCreateDM = async (userIdA, userIdB) => {
     return conversation;
 };
 
-/**
- * Get all conversations for a user, sorted by latest activity.
- */
 export const getUserConversations = async (userId) => {
     return Conversation.find({
         "participants.userId": userId
@@ -35,9 +28,6 @@ export const getUserConversations = async (userId) => {
         .lean();
 };
 
-/**
- * Get a single conversation — only if the user is a participant.
- */
 export const getConversationById = async (conversationId, userId) => {
     const conversation = await Conversation.findOne({
         _id: conversationId,
@@ -47,10 +37,6 @@ export const getConversationById = async (conversationId, userId) => {
     return conversation;
 };
 
-/**
- * Mark all messages as read for a user in a conversation.
- * Updates lastReadMessageId to the latest message.
- */
 export const markAsRead = async (conversationId, userId, messageId) => {
     return Conversation.updateOne(
         { _id: conversationId, "participants.userId": userId },
@@ -58,9 +44,6 @@ export const markAsRead = async (conversationId, userId, messageId) => {
     );
 };
 
-/**
- * Update the lastMessage snapshot on the conversation document.
- */
 export const updateLastMessage = async (conversationId, message) => {
     return Conversation.findByIdAndUpdate(
         conversationId,

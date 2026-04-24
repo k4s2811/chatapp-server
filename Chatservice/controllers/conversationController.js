@@ -1,10 +1,6 @@
 import * as conversationService from "../services/conversationService.js";
 
-/**
- * POST /api/conversations
- * Start or get a 1-to-1 conversation with another user.
- * Body: { targetUserId }
- */
+
 export const startOrGetConversation = async (req, res) => {
     try {
         const { targetUserId } = req.body;
@@ -26,10 +22,6 @@ export const startOrGetConversation = async (req, res) => {
     }
 };
 
-/**
- * GET /api/conversations
- * Get all conversations for the logged-in user.
- */
 export const getMyConversations = async (req, res) => {
     try {
         const conversations = await conversationService.getUserConversations(req.user.userId);
@@ -39,10 +31,7 @@ export const getMyConversations = async (req, res) => {
     }
 };
 
-/**
- * GET /api/conversations/:conversationId
- * Get a single conversation by ID.
- */
+
 export const getConversation = async (req, res) => {
     try {
         const conversation = await conversationService.getConversationById(
@@ -60,11 +49,6 @@ export const getConversation = async (req, res) => {
     }
 };
 
-/**
- * POST /api/conversations/:conversationId/read
- * Mark conversation as read up to a specific messageId.
- * Body: { messageId }
- */
 export const markConversationRead = async (req, res) => {
     try {
         const { messageId } = req.body;

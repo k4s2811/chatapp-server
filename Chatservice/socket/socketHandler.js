@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import jwt from "jsonwebtoken"; // Standard ES Import
+import jwt from "jsonwebtoken";
 
 import * as messageService from "../services/messageService.js";
 import { markAsRead } from "../services/conversationService.js";
@@ -8,8 +8,8 @@ import { setOnlineStatus, setOfflineStatus, isUserOnline } from "../config/redis
 const initSocket = (httpServer) => {
     const io = new Server(httpServer, {
         cors: {
-            origin: "*",
-            methods: ["GET", "POST"]
+            origin: 'http://localhost:5100',
+            credentials: true
         }
     });
 
@@ -31,6 +31,7 @@ const initSocket = (httpServer) => {
         const userId = socket.user.userId;
 
         await setOnlineStatus(userId, socket.id);
+        io.emit("user_online", { userId });
 
         socket.on("join_conversation", (conversationId) => {
             socket.join(`conv:${conversationId}`);
@@ -61,12 +62,11 @@ const initSocket = (httpServer) => {
         });
 
         socket.on("typing", ({ conversationId, isTyping }) => {
-            io.to(`conv:${conversationId}`).emit("typing", { userId, isTyping, conversationId });
+            socket.to(`conv:${conversationId}`).emit("typing", { userId, isTyping, conversationId });
         });
 
         socket.on("mark_read", async ({ conversationId, messageId }) => {
             await markAsRead(conversationId, userId, messageId);
-
             io.to(`conv:${conversationId}`).emit("messages_read", { conversationId, readByUserId: userId, messageId });
         });
 
@@ -77,6 +77,7 @@ const initSocket = (httpServer) => {
 
         socket.on("disconnect", async () => {
             await setOfflineStatus(userId);
+            io.emit("user_offline", { userId });
         });
     });
 

@@ -11,8 +11,8 @@ const start = async () => {
     const io = initSocket(httpServer);
     await setupRedis(io);
     app.set("io", io);
-    httpServer.listen(ENV_VARS.PORT, () => {
-        console.log(`[Server] Chat service running on port ${ENV_VARS.PORT}`);
+    httpServer.listen(ENV_VARS.PORT || 3002, () => {
+        console.log(`[Server] Chat service running on port ${ENV_VARS.PORT || 3002}`);
     });
 };
 
