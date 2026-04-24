@@ -34,7 +34,13 @@ export async function signup(req, res) {
     );
     const user = newUser.rows[0];
 
-    const tokenPayload = { sub: user.id, role: user.role, email: user.email };
+    const tokenPayload = {
+        sub: user.id,
+        role: user.role,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar_url
+    };
     const accessToken = generateAccessToken(tokenPayload);
     const refreshToken = generateRefreshToken({ sub: user.id });
 
@@ -100,7 +106,13 @@ export async function login(req, res) {
         return res.status(400).json({ success: false, message: "Invalid credentials" });
     }
 
-    const tokenPayload = { sub: user.id, role: user.role, email: user.email };
+    const tokenPayload = {
+        sub: user.id,
+        role: user.role,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar_url
+    };
     const accessToken = generateAccessToken(tokenPayload);
     const refreshToken = generateRefreshToken({ sub: user.id });
 
@@ -217,3 +229,27 @@ export async function me(req, res) {
         data: { user }
     });
 };
+
+export async function getUsersByIds(req, res) {
+    const { ids } = req.query;
+    if (!ids) return res.status(400).json({ error: "No ids provided" });
+
+    const idArray = ids.split(',');
+
+    const result = await query(
+        `SELECT id, name, avatar_url, bio, is_active 
+         FROM users 
+         WHERE id = ANY($1::uuid[])`,
+        [idArray]
+    );
+
+    res.json({ success: true, data: result.rows });
+}
+
+export async function getAllUsers(req, res) {
+    const result = await query(
+        `SELECT id, name, email, avatar_url, bio, is_active 
+         FROM users`
+    );
+    res.json({ success: true, data: result.rows });
+}

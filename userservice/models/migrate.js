@@ -29,6 +29,8 @@ export const migrate = async () => {
         email       VARCHAR(255) UNIQUE NOT NULL,
         name        VARCHAR(50) NOT NULL,
         password    VARCHAR(255) NOT NULL,
+        avatar_url  TEXT DEFAULT NULL,
+        bio         VARCHAR(150) DEFAULT 'Available',
         role        VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin', 'moderator')),
         is_active   BOOLEAN NOT NULL DEFAULT TRUE,
         is_verified BOOLEAN NOT NULL DEFAULT FALSE,
@@ -95,6 +97,7 @@ export const migrate = async () => {
       'CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id)',
       'CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id)',
       'CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at)',
+      'CREATE INDEX IF NOT EXISTS idx_users_avatar_url ON users(avatar_url)',
     ];
     for (const idx of indexes) await client.query(idx);
 
