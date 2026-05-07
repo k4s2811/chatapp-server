@@ -1,21 +1,22 @@
 import * as messageService from "../services/messageService.js";
 
+// Helper to safely get the user ID
+const getUserId = (user) => user.userId || user.sub || user._id || user.id;
+
 export const sendMessage = async (req, res) => {
     try {
-        const { text, attachments, replyToMessageId } = req.body;
+        const { text, attachments, replyToMessageId, clientMessageId } = req.body;
         const { conversationId } = req.params;
-        const senderId = req.user.userId;
+        const senderId = getUserId(req.user); // FIXED
 
         const message = await messageService.sendMessage({
             conversationId,
             senderId,
             text,
             attachments,
-            replyToMessageId
+            replyToMessageId,
+            clientMessageId
         });
-
-        const io = req.app.get("io");
-        io.to(`conv:${conversationId}`).emit("new_message", message);
 
         return res.status(201).json({ success: true, data: message });
     } catch (err) {
@@ -28,10 +29,11 @@ export const getMessages = async (req, res) => {
     try {
         const { conversationId } = req.params;
         const { limit, before } = req.query;
+        const userId = getUserId(req.user); // FIXED
 
         const messages = await messageService.getMessages({
             conversationId,
-            userId: req.user.userId,
+            userId,
             limit: parseInt(limit) || 30,
             before: before || null
         });
@@ -45,7 +47,8 @@ export const getMessages = async (req, res) => {
 
 export const deleteMessage = async (req, res) => {
     try {
-        const message = await messageService.deleteMessage(req.params.messageId, req.user.userId);
+        const userId = getUserId(req.user); // FIXED
+        const message = await messageService.deleteMessage(req.params.messageId, userId);
 
         const io = req.app.get("io");
         io.to(`conv:${message.conversationId.toString()}`).emit("message_deleted", {

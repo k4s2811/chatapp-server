@@ -237,7 +237,7 @@ export async function getUsersByIds(req, res) {
     const idArray = ids.split(',');
 
     const result = await query(
-        `SELECT id, name, avatar_url, bio, is_active 
+        `SELECT id, email, name, avatar_url, bio, is_active 
          FROM users 
          WHERE id = ANY($1::uuid[])`,
         [idArray]
@@ -252,4 +252,13 @@ export async function getAllUsers(req, res) {
          FROM users`
     );
     res.json({ success: true, data: result.rows });
+}
+
+export async function updateProfile(req, res) {
+    const { name, bio, avatar_url } = req.body;
+    const result = await query(
+        `UPDATE users SET name = $1, bio = $2, avatar_url = $3 WHERE id = $4`,
+        [name, bio, avatar_url, req.user.id]
+    );
+    res.json({ success: true, data: result.rows[0] });
 }

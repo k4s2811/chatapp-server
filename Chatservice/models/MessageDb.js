@@ -1,4 +1,3 @@
-// src/models/Message.js
 import mongoose from "mongoose";
 
 const attachmentSchema = new mongoose.Schema({
@@ -25,8 +24,16 @@ const messageSchema = new mongoose.Schema({
 
     senderId: {
         type: String,
-        required: true
+        required: true,
+        index: true
     },
+
+    clientMessageId: {
+        type: String,
+        required: true,
+        unique: true
+    },
+
     content: {
         text: {
             type: String,
@@ -34,6 +41,14 @@ const messageSchema = new mongoose.Schema({
         },
         attachments: [attachmentSchema]
     },
+
+    deliveredTo: [{
+        type: String
+    }],
+
+    readBy: [{
+        type: String
+    }],
 
     isDeleted: {
         type: Boolean,
@@ -45,6 +60,7 @@ const messageSchema = new mongoose.Schema({
         ref: "Message",
         default: null
     }
+
 }, {
     timestamps: true
 });

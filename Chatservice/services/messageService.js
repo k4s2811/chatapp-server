@@ -1,9 +1,21 @@
+// backend/services/messageService.js
+import mongoose from "mongoose";
 import Message from "../models/MessageDb.js";
 import Conversation from "../models/ConversationDb.js";
-import { updateLastMessage } from "./conversationService.js";
 
+export const sendMessage = async ({
+    conversationId,
+    senderId,
+    text = "",
+    attachments = [],
+    replyToMessageId = null,
+    clientMessageId
+}) => {
+    // 1. Prevent duplicate sends from optimistic UI
+    const existingMessage = await Message.findOne({ clientMessageId });
+    if (existingMessage) { return existingMessage; }
 
-export const sendMessage = async ({ conversationId, senderId, text = "", attachments = [], replyToMessageId = null }) => {
+    // 2. Verify user is in this conversation
     const conversation = await Conversation.findOne({
         _id: conversationId,
         "participants.userId": senderId
@@ -13,16 +25,41 @@ export const sendMessage = async ({ conversationId, senderId, text = "", attachm
         throw new Error("Conversation not found or access denied");
     }
 
-    const message = await Message.create({
-        conversationId,
-        senderId,
-        content: { text, attachments },
-        replyToMessageId: replyToMessageId || null
-    });
+    try {
+        // 3. Create the message (NO transaction session)
+        const message = await Message.create({
+            conversationId,
+            senderId,
+            clientMessageId,
+            content: {
+                text,
+                attachments
+            },
+            deliveredTo: [senderId],
+            readBy: [senderId],
+            replyToMessageId
+        });
 
-    await updateLastMessage(conversationId, message);
+        // 4. Update the conversation's last message
+        await Conversation.updateOne(
+            { _id: conversationId },
+            {
+                $set: {
+                    lastMessage: {
+                        messageId: message._id,
+                        content: text || "[attachment]",
+                        senderId,
+                        createdAt: message.createdAt
+                    }
+                }
+            }
+        );
 
-    return message;
+        return message;
+
+    } catch (err) {
+        throw err;
+    }
 };
 
 export const getMessages = async ({ conversationId, userId, limit = 30, before = null }) => {
@@ -63,6 +100,7 @@ export const deleteMessage = async (messageId, userId) => {
     }
 
     message.isDeleted = true;
+    message.content.text = "This message was deleted";
     await message.save();
 
     return message;

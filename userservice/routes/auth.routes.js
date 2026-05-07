@@ -1,6 +1,6 @@
 import express from "express";
 import { authenticate } from "../middleware/auth.middlewares.js";
-import { signup, login, logout, refresh, changePassword, me, getUsersByIds, getAllUsers } from "../controllers/auth.controller.js"
+import { signup, login, logout, refresh, changePassword, me, getUsersByIds, getAllUsers, updateProfile } from "../controllers/auth.controller.js"
 import { validate, registerRules, loginRules, changePasswordRules } from "../middleware/Validate.middleware.js";
 
 const router = express.Router();
@@ -19,9 +19,11 @@ router.get("/me", authenticate, me);
 
 router.post("/changepassword", authenticate, changePasswordRules, validate, changePassword);
 
-router.get("/usersByIds", getUsersByIds);
+router.get("/usersByIds", authenticate, getUsersByIds);
 
-router.get("/allusers",authenticate, getAllUsers);
+router.get("/allusers", authenticate, getAllUsers);
+
+router.post("/update", authenticate, updateProfile);
 
 // router.post("/delete", deleteUser);
 

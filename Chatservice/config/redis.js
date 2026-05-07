@@ -32,23 +32,32 @@ const safetyCheck = (value, label = "Value") => {
     if (!value) throw new Error(`${label} is required`);
 };
 
-// set userid with socketid
+const getUserSocketKey = (userId) => `user:${userId}:sockets`;
+
+// Add a specific socket ID to the user's set
 export const setOnlineStatus = async (userId, socketId) => {
-    safetyCheck(userId, socketId);
-    await pubClient.hSet("online_users", userId, socketId);
+    safetyCheck(userId, "User ID");
+    safetyCheck(socketId, "Socket ID");
+    await pubClient.sAdd(getUserSocketKey(userId), socketId);
 };
-//remove userid with socketid
-export const setOfflineStatus = async (userId) => {
-    safetyCheck(userId);
-    await pubClient.hDel("online_users", userId);
+
+// Remove a specific socket ID when one tab disconnects
+export const setOfflineStatus = async (userId, socketId) => {
+    safetyCheck(userId, "User ID");
+    safetyCheck(socketId, "Socket ID");
+    await pubClient.sRem(getUserSocketKey(userId), socketId);
 };
-//get socketid with userid if he is online
-export const getSocketId = async (userId) => {
-    safetyCheck(userId);
-    return await pubClient.hGet("online_users", userId);
+
+// Get all active socket IDs for a user
+export const getSocketIds = async (userId) => {
+    safetyCheck(userId, "User ID");
+    return await pubClient.sMembers(getUserSocketKey(userId));
 };
-//check if user is online
+
+// User is online if their set of sockets is not empty
 export const isUserOnline = async (userId) => {
-    safetyCheck(userId);
-    return await pubClient.hExists("online_users", userId);
+    safetyCheck(userId, "User ID");
+    const count = await pubClient.sCard(getUserSocketKey(userId));
+    return count > 0;
 };
+
