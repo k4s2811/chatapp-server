@@ -219,7 +219,7 @@ export async function changePassword(req, res) {
 
 export async function me(req, res) {
     const result = await query(
-        `SELECT id, email, name, role, is_active, is_verified, created_at, updated_at
+        `SELECT id, email, bio, name, role, is_active, is_verified, created_at, updated_at
        FROM users WHERE id = $1`,
         [req.user.id]
     );
