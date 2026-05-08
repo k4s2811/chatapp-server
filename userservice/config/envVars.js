@@ -4,6 +4,8 @@ dotenv.config();
 export const ENV_VARS = {
   PORT: process.env.PORT,
   NODE_ENV: process.env.NODE_ENV,
+  SERVICE_NAME: process.env.SERVICE_NAME,
+  LOG_LEVEL: process.env.LOG_LEVEL,
   DB: {
     PORT: process.env.PG_DBPORT,
     USER: process.env.PG_USER,
