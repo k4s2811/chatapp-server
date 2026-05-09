@@ -1,13 +1,12 @@
 import * as messageService from "../services/messageService.js";
 
-// Helper to safely get the user ID
 const getUserId = (user) => user.userId || user.sub || user._id || user.id;
 
 export const sendMessage = async (req, res) => {
     try {
         const { text, attachments, replyToMessageId, clientMessageId } = req.body;
         const { conversationId } = req.params;
-        const senderId = getUserId(req.user); // FIXED
+        const senderId = getUserId(req.user);
 
         const message = await messageService.sendMessage({
             conversationId,
@@ -29,12 +28,12 @@ export const getMessages = async (req, res) => {
     try {
         const { conversationId } = req.params;
         const { limit, before } = req.query;
-        const userId = getUserId(req.user); // FIXED
+        const userId = getUserId(req.user);
 
         const messages = await messageService.getMessages({
             conversationId,
             userId,
-            limit: parseInt(limit) || 30,
+            limit: parseInt(limit) || 15,
             before: before || null
         });
 
@@ -47,7 +46,7 @@ export const getMessages = async (req, res) => {
 
 export const deleteMessage = async (req, res) => {
     try {
-        const userId = getUserId(req.user); // FIXED
+        const userId = getUserId(req.user);
         const message = await messageService.deleteMessage(req.params.messageId, userId);
 
         const io = req.app.get("io");

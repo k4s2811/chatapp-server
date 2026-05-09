@@ -46,10 +46,6 @@ const messageSchema = new mongoose.Schema({
         type: String
     }],
 
-    readBy: [{
-        type: String
-    }],
-
     isDeleted: {
         type: Boolean,
         default: false

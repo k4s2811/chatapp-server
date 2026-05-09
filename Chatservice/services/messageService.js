@@ -11,11 +11,9 @@ export const sendMessage = async ({
     replyToMessageId = null,
     clientMessageId
 }) => {
-    // 1. Prevent duplicate sends from optimistic UI
     const existingMessage = await Message.findOne({ clientMessageId });
     if (existingMessage) { return existingMessage; }
 
-    // 2. Verify user is in this conversation
     const conversation = await Conversation.findOne({
         _id: conversationId,
         "participants.userId": senderId
@@ -26,7 +24,6 @@ export const sendMessage = async ({
     }
 
     try {
-        // 3. Create the message (NO transaction session)
         const message = await Message.create({
             conversationId,
             senderId,
@@ -35,12 +32,10 @@ export const sendMessage = async ({
                 text,
                 attachments
             },
-            deliveredTo: [senderId],
-            readBy: [senderId],
+
             replyToMessageId
         });
 
-        // 4. Update the conversation's last message
         await Conversation.updateOne(
             { _id: conversationId },
             {
@@ -62,7 +57,7 @@ export const sendMessage = async ({
     }
 };
 
-export const getMessages = async ({ conversationId, userId, limit = 30, before = null }) => {
+export const getMessages = async ({ conversationId, userId, limit = 15, before = null }) => {
     const conversation = await Conversation.findOne({
         _id: conversationId,
         "participants.userId": userId

@@ -141,12 +141,19 @@ export async function me(req, res, next) {
 export async function getUsersByIds(req, res, next) {
   try {
     const { ids } = req.query;
-    const result = await authService.getUsersByIdsList(ids);
 
-    if (result.error) {
+    if (!ids) {
+      req.log.warn({ event: "GET_USERS_BY_IDS_FAILED", userId: req.user.id, message: "No ids provided" })
       return res.status(400).json({ success: false, message: "No ids provided" });
     }
 
+    const result = await authService.getUsersByIdsList(ids);
+
+    if (result.error) {
+      req.log.warn({ event: "GET_USERS_BY_IDS_FAILED", userId: req.user.id })
+      return res.status(400).json({ success: false, message: "Invalid ids provided" });
+    }
+    req.log.info({ event: "GET_USERS_BY_IDS_SUCCESS", userId: req.user.id })
     return res.json({ success: true, data: result.data });
   } catch (err) {
     next(err);
@@ -155,8 +162,13 @@ export async function getUsersByIds(req, res, next) {
 
 export async function getAllUsers(req, res, next) {
   try {
-    const users = await authService.getAllUsersData();
-    return res.json({ success: true, data: users });
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const search = req.query.search || '';
+
+    const { users, pagination } = await authService.getAllUsersData(page, limit, search);
+
+    return res.json({ success: true, data: users, pagination });
   } catch (err) {
     next(err);
   }

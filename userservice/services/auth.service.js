@@ -172,19 +172,66 @@ export const getUserData = async (userId) => {
 
 // --- GET USERS BY IDS ---
 export const getUsersByIdsList = async (ids) => {
-    if (!ids) return { error: true };
-    const idArray = ids.split(",");
-    const result = await query(
-        `SELECT id, email, name, avatar_url, bio, is_active FROM users WHERE id = ANY($1::uuid[])`,
-        [idArray]
-    );
-    return { error: false, data: result.rows };
-};
+    if (!ids || ids.length === 0) return { error: true };
 
+    let idArray;
+    if (Array.isArray(ids)) {
+        idArray = ids;
+    } else if (typeof ids === 'string') {
+        idArray = ids.split(",");
+    } else {
+        return { error: true };
+    }
+
+    idArray = idArray.map(id => id.trim()).filter(id => id !== '');
+
+    if (idArray.length === 0) return { error: true };
+
+    try {
+        const result = await query(
+            `SELECT id, email, name, avatar_url, bio, is_active FROM users WHERE id = ANY($1::uuid[])`,
+            [idArray]
+        );
+        return { error: false, data: result.rows };
+    } catch (err) {
+        console.error("Database error in getUsersByIdsList:", err);
+        throw err;
+    }
+};
 // --- GET ALL USERS ---
-export const getAllUsersData = async () => {
-    const result = await query(`SELECT id, name, email, avatar_url, bio, is_active FROM users`);
-    return result.rows;
+export const getAllUsersData = async (page = 1, limit = 10, search = '') => {
+    const offset = (page - 1) * limit;
+
+    let countQuery = `SELECT COUNT(*) FROM users`;
+    let mainQuery = `SELECT id, name, email, avatar_url, bio, is_active FROM users`;
+
+    let countParams = [];
+    let mainParams = [];
+
+    if (search) {
+        countQuery += ` WHERE email ILIKE $1 OR name ILIKE $1`;
+        countParams = [`%${search}%`];
+        mainQuery += ` WHERE email ILIKE $1 OR name ILIKE $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`;
+        mainParams = [`%${search}%`, limit, offset];
+    } else {
+        mainQuery += ` ORDER BY created_at DESC LIMIT $1 OFFSET $2`;
+        mainParams = [limit, offset];
+    }
+
+    const countResult = await query(countQuery, countParams);
+    const totalUsers = parseInt(countResult.rows[0].count, 10);
+
+    const result = await query(mainQuery, mainParams);
+
+    return {
+        users: result.rows,
+        pagination: {
+            total: totalUsers,
+            page,
+            limit,
+            totalPages: Math.ceil(totalUsers / limit)
+        }
+    };
 };
 
 // --- UPDATE PROFILE ---
