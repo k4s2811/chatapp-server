@@ -38,14 +38,27 @@ const getUserSocketKey = (userId) => `user:${userId}:sockets`;
 export const setOnlineStatus = async (userId, socketId) => {
     safetyCheck(userId, "User ID");
     safetyCheck(socketId, "Socket ID");
-    await pubClient.sAdd(getUserSocketKey(userId), socketId);
+    
+    const key = getUserSocketKey(userId);
+    await pubClient.sAdd(key, socketId);
+    await pubClient.expire(key, 86400); 
 };
 
 // Remove a specific socket ID when one tab disconnects
 export const setOfflineStatus = async (userId, socketId) => {
     safetyCheck(userId, "User ID");
     safetyCheck(socketId, "Socket ID");
-    await pubClient.sRem(getUserSocketKey(userId), socketId);
+
+    const key = getUserSocketKey(userId);
+
+    await pubClient.sRem(key, socketId);
+
+    // cleanup empty set
+    const remaining = await pubClient.sCard(key);
+
+    if (remaining === 0) {
+        await pubClient.del(key);
+    }
 };
 
 // Get all active socket IDs for a user
@@ -60,4 +73,3 @@ export const isUserOnline = async (userId) => {
     const count = await pubClient.sCard(getUserSocketKey(userId));
     return count > 0;
 };
-

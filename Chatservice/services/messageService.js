@@ -1,7 +1,6 @@
-// backend/services/messageService.js
-import mongoose from "mongoose";
 import Message from "../models/MessageDb.js";
 import Conversation from "../models/ConversationDb.js";
+import { updateLastMessage } from "../services/conversationService.js"
 
 export const sendMessage = async ({
     conversationId,
@@ -36,19 +35,7 @@ export const sendMessage = async ({
             replyToMessageId
         });
 
-        await Conversation.updateOne(
-            { _id: conversationId },
-            {
-                $set: {
-                    lastMessage: {
-                        messageId: message._id,
-                        content: text || "[attachment]",
-                        senderId,
-                        createdAt: message.createdAt
-                    }
-                }
-            }
-        );
+        await updateLastMessage(conversationId, message)
 
         return message;
 
@@ -96,6 +83,8 @@ export const deleteMessage = async (messageId, userId) => {
 
     message.isDeleted = true;
     message.content.text = "This message was deleted";
+
+    await updateLastMessage(message.conversationId, message);
     await message.save();
 
     return message;

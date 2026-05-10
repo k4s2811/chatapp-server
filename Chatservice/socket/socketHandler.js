@@ -1,10 +1,9 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
-
 import Conversation from "../models/ConversationDb.js";
 import * as messageService from "../services/messageService.js";
 import { markAsRead } from "../services/conversationService.js";
-import { setOnlineStatus, setOfflineStatus, isUserOnline } from "../config/redis.js";
+
 
 const initSocket = (httpServer) => {
     const io = new Server(httpServer, {
@@ -14,110 +13,84 @@ const initSocket = (httpServer) => {
         }
     });
 
-    // Authentication Middleware
+    // 1. Authentication Middleware
     io.use((socket, next) => {
         try {
             const token =
                 socket.handshake.auth?.token ||
                 socket.handshake.headers?.authorization?.split(" ")[1];
 
-            if (!token) return next(new Error("Authentication error: no token"));
+            if (!token) {
+                return next(new Error("Authentication error: no token provided"));
+            }
 
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             socket.user = decoded;
             next();
-        } catch {
-            next(new Error("Authentication error: invalid token"));
+        } catch (err) {
+            console.error("[Socket] Auth Error:", err.message);
+            next(new Error("Authentication error: invalid or expired token"));
         }
     });
 
     io.on("connection", async (socket) => {
-        // Bulletproof ID extraction (handles different JWT payload structures)
-        const userId = socket.user.userId || socket.user.sub || socket.user._id || socket.user.id;
+        const userId = String(socket.user.userId || socket.user.sub || socket.user._id || socket.user.id);
         console.log(`[Socket] CONNECTED: User ${userId} (Socket ID: ${socket.id})`);
 
-        await setOnlineStatus(userId, socket.id);
+        socket.join(userId);
         io.emit("user_online", { userId });
 
         // JOIN CONVERSATION ROOM
         socket.on("join_conversation", async (conversationId) => {
             try {
-                console.log(`[Socket] User ${userId} attempting to join conv:${conversationId}`);
-                
-                // We check if the conversation exists. If you experience routing issues, 
-                // it is usually Mongoose struggling to cast strings to ObjectIds here.
-                const conversation = await Conversation.findById(conversationId);
+                const conversation = await Conversation.findOne({
+                    _id: conversationId,
+                    "participants.userId": userId
+                });
 
                 if (!conversation) {
-                    console.log(`[Socket] Denied: Conversation ${conversationId} not found in DB`);
+                    socket.emit("room_error", { message: "Access denied" });
                     return;
                 }
-
                 socket.join(`conv:${conversationId}`);
-                console.log(`[Socket] Success: User ${userId} joined conv:${conversationId}`);
             } catch (err) {
-                console.error("[Socket] Error joining room:", err.message);
+                console.error(`[Socket] Error joining room conv:${conversationId}:`, err.message);
             }
         });
 
         // LEAVE CONVERSATION ROOM
         socket.on("leave_conversation", (conversationId) => {
-            console.log(`[Socket] User ${userId} left conv:${conversationId}`);
             socket.leave(`conv:${conversationId}`);
         });
 
-        // SEND MESSAGE
+        // SEND MESSAGE 
         socket.on("send_message", async (payload, ack) => {
             try {
-                const {
-                    conversationId,
-                    text,
-                    attachments,
-                    replyToMessageId,
-                    clientMessageId
-                } = payload;
+                const { conversationId, text, attachments, replyToMessageId, clientMessageId } = payload;
 
-                console.log(`[Socket] User ${userId} sending message to conv:${conversationId}`);
-
-                // Save to database
                 const message = await messageService.sendMessage({
-                    conversationId,
-                    senderId: userId,
-                    text,
-                    attachments,
-                    replyToMessageId,
-                    clientMessageId
+                    conversationId, senderId: userId, text, attachments, replyToMessageId, clientMessageId
                 });
-                // Broadcast to everyone in the room EXCEPT the sender
-                socket.to(`conv:${conversationId}`).emit("new_message", message);
-                console.log(`[Socket] Broadcasted message to conv:${conversationId}`);
 
-                // Acknowledge success back to the sender
+                socket.to(`conv:${conversationId}`).emit("new_message", message);
+
                 if (typeof ack === "function") ack({ success: true, messageId: message._id });
             } catch (err) {
-                console.error("[Socket] Send message error:", err.message);
                 if (typeof ack === "function") ack({ success: false, error: err.message });
             }
         });
 
         // TYPING INDICATOR
         socket.on("typing", ({ conversationId, isTyping }) => {
-            socket.to(`conv:${conversationId}`).emit("typing", {
-                userId,
-                conversationId,
-                isTyping
-            });
+            socket.to(`conv:${conversationId}`).emit("typing", { userId, conversationId, isTyping });
         });
 
         // READ RECEIPT
         socket.on("mark_read", async ({ conversationId, messageId }) => {
             try {
                 await markAsRead(conversationId, userId, messageId);
-
                 io.to(`conv:${conversationId}`).emit("messages_read", {
-                    conversationId,
-                    messageId,
-                    readByUserId: userId
+                    conversationId, messageId, readByUserId: userId
                 });
             } catch (err) {
                 console.error("[Socket] Mark read error:", err.message);
@@ -126,23 +99,26 @@ const initSocket = (httpServer) => {
 
         // CHECK USER ONLINE STATUS
         socket.on("check_online", async (targetUserId, ack) => {
-            const online = await isUserOnline(targetUserId);
-            if (typeof ack === "function") {
-                ack({ online });
+            try {
+                const sockets = await io.in(String(targetUserId)).fetchSockets();
+                const online = sockets.length > 0;
+
+                if (typeof ack === "function") ack({ online });
+            } catch (err) {
+                if (typeof ack === "function") ack({ online: false });
             }
         });
 
-        // DISCONNECT
+        // DISCONNECT HANDLING
         socket.on("disconnect", async () => {
             console.log(`[Socket] DISCONNECTED: User ${userId} (Socket ID: ${socket.id})`);
+            setTimeout(async () => {
+                const sockets = await io.in(userId).fetchSockets();
 
-            await setOfflineStatus(userId, socket.id);
-
-            // Check if the user is completely offline (e.g., no other tabs open)
-            const stillOnline = await isUserOnline(userId);
-            if (!stillOnline) {
-                io.emit("user_offline", { userId });
-            }
+                if (sockets.length === 0) {
+                    io.emit("user_offline", { userId });
+                }
+            }, 1000);
         });
     });
 
