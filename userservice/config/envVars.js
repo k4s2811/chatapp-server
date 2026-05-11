@@ -6,6 +6,7 @@ export const ENV_VARS = {
   NODE_ENV: process.env.NODE_ENV,
   SERVICE_NAME: process.env.SERVICE_NAME,
   LOG_LEVEL: process.env.LOG_LEVEL,
+  DATABASE_URL: process.env.DATABASE_URL,
   DB: {
     PORT: process.env.PG_DBPORT,
     USER: process.env.PG_USER,
