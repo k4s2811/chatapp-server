@@ -15,7 +15,7 @@ import logger from "./utils/logger.js";
 
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: 'http://localhost:5100', credentials: true }));
+app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());
 
 app.use(pinoHttp({

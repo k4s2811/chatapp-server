@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import conversationRoutes from "./routes/conversationRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
+import adminRoutes from "./routes/admin.routes.js";
 
 const app = express();
 
@@ -10,6 +11,7 @@ app.use(express.json());
 
 app.get("/health", (_req, res) => res.json({ status: "ok", service: "chat-service" }));
 
+app.use("/chat/admin", adminRoutes);
 app.use("/chat/conversations", conversationRoutes);
 app.use("/chat/messages", messageRoutes);
 
