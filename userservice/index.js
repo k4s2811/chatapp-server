@@ -27,6 +27,11 @@ app.get("/health", (req, res) => res.status(200).json({ status: "ok" }));
 app.use("/chat/user", authRoutes);
 app.use(errorHandler);
 
+app.get("/", (req, res) => {
+  res.send("User Service Running");
+});
+
+
 const start = async () => {
   await migrate();   // tables created first
   app.listen(ENV_VARS.PORT, () => {
