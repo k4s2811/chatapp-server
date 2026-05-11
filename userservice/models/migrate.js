@@ -1,19 +1,5 @@
-import pkg from 'pg';
 import { ENV_VARS } from "../config/envVars.js";
-
-const { Pool } = pkg;
-
-const pool = new Pool({
-  user: ENV_VARS.DB.USER,
-  host: ENV_VARS.DB.HOST,
-  database: ENV_VARS.DB.DATABASE,
-  password: ENV_VARS.DB.PASSWORD,
-  port: ENV_VARS.DB.PORT,
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
-
+import pool from "../config/db.js";
 
 export const migrate = async () => {
   const client = await pool.connect();
