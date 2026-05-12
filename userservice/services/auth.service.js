@@ -189,7 +189,7 @@ export const getUsersByIdsList = async (ids) => {
 
     try {
         const result = await query(
-            `SELECT id, email, name, avatar_url, bio, is_active FROM users WHERE id = ANY($1::uuid[])`,
+            `SELECT id, email, name, avatar_url, bio, is_active, created_at FROM users WHERE id = ANY($1::uuid[])`,
             [idArray]
         );
         return { error: false, data: result.rows };
