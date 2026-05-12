@@ -9,7 +9,6 @@ export const setupRedis = async (io) => {
     pubClient = createClient({
         url: ENV_VARS.REDIS_URL,
         socket: {
-            tls: true,
             reconnectStrategy: (retries) => {
                 console.log(`[Redis] Reconnecting... Attempt ${retries}`);
                 const delay = Math.min(retries * 50, 2000);
