@@ -243,3 +243,60 @@ export const updateUserData = async (userId, data) => {
     );
     return result.rows[0];
 };
+
+// --- GOOGLE OAUTH ---
+export const googleAuthUser = async (profile, req) => {
+    try {
+        const email = profile.emails[0].value;
+        const name = profile.displayName;
+        const avatar = profile.photos && profile.photos.length > 0 ? profile.photos[0].value : null;
+
+        req.log.info({ event: "GOOGLE_AUTH_SERVICE_STARTED", email });
+
+        // 1. Check if user already exists
+        const existingUserResult = await query(
+            `SELECT id, email, password, role, name, avatar_url, is_active, is_verified FROM users WHERE email = $1`,
+            [email]
+        );
+
+        let user;
+
+        if (existingUserResult.rows.length) {
+            // User exists, just log them in
+            user = existingUserResult.rows[0];
+            if (!user.is_active) throw new Error("Account is disabled");
+        } else {
+            // User does not exist, create a new account
+            // We generate a random password because your DB likely requires one
+            const randomPassword = crypto.randomBytes(16).toString("hex");
+            const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+            const newUser = await query(
+                `INSERT INTO users (email, name, password, avatar_url, is_verified) VALUES ($1, $2, $3, $4, true) RETURNING id, email, name, role, avatar_url, is_active, is_verified, created_at`,
+                [email, name, hashedPassword, avatar]
+            );
+            user = newUser.rows[0];
+            await audit(user.id, "SIGNUP_GOOGLE", req, { email });
+        }
+
+        // 2. Generate standard tokens
+        const tokenPayload = { sub: user.id, role: user.role, email: user.email, name: user.name, avatar: user.avatar_url };
+        const accessToken = generateAccessToken(tokenPayload);
+        const refreshToken = generateRefreshToken({ sub: user.id });
+        const refreshExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+        // 3. Save refresh token to DB
+        await query(
+            `INSERT INTO refresh_tokens (user_id, token, expires_at, ip_address, user_agent) VALUES ($1, $2, $3, $4, $5)`,
+            [user.id, refreshToken, refreshExpiresAt, req.ip, req.get("user-agent")]
+        );
+
+        await audit(user.id, "LOGIN_GOOGLE", req, { email: user.email });
+        req.log.info({ event: "GOOGLE_AUTH_SERVICE_SUCCESS", userId: user.id });
+
+        return { error: false, accessToken, refreshToken, user };
+    } catch (err) {
+        req.log.error({ err, event: "GOOGLE_AUTH_SERVICE_ERROR" });
+        throw err;
+    }
+};

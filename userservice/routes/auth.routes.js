@@ -1,7 +1,8 @@
 import express from "express";
 import { authenticate } from "../middleware/auth.middlewares.js";
-import { signup, login, logout, refresh, changePassword, me, getUsersByIds, getAllUsers, updateProfile } from "../controllers/auth.controller.js"
+import { signup, login, logout, refresh, changePassword, me, getUsersByIds, getAllUsers, updateProfile, googleCallback } from "../controllers/auth.controller.js"
 import { validate, registerRules, loginRules, changePasswordRules } from "../middleware/Validate.middleware.js";
+import passport from "passport";
 
 const router = express.Router();
 
@@ -26,5 +27,18 @@ router.get("/allusers", authenticate, getAllUsers);
 router.post("/update", authenticate, updateProfile);
 
 // router.post("/delete", deleteUser);
+
+// 1. Send user to Google
+router.get("/google", passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+// 2. Google sends user back here
+router.get(
+    "/google/callback",
+    passport.authenticate('google', {
+        failureRedirect: 'http://localhost:5100/signin?error=auth_failed',
+        session: false
+    }),
+    googleCallback
+);
 
 export default router;

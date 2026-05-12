@@ -183,3 +183,32 @@ export async function updateProfile(req, res, next) {
     next(err);
   }
 }
+
+export async function googleCallback(req, res, next) {
+  try {
+    // Passport attaches the Google profile to req.user during the authentication phase
+    const profile = req.user;
+
+    if (!profile) {
+      req.log.warn({ event: "GOOGLE_CALLBACK_NO_PROFILE" });
+      return res.redirect("http://localhost:5100/signin?error=oauth_failed");
+    }
+
+    // Pass the profile to the DB service
+    const result = await authService.googleAuthUser(profile, req);
+
+    // Set the refresh token securely in the cookie
+    res.cookie("refreshToken", result.refreshToken, {
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
+      sameSite: "strict",
+      secure: ENV_VARS.NODE_ENV === "production",
+    });
+
+    // The Magic Redirect: Send the user to the frontend chat route with the JWT in the URL
+    return res.redirect(`http://localhost:5100/chat?token=${result.accessToken}`);
+  } catch (err) {
+    req.log.error({ err, event: "GOOGLE_CALLBACK_ERROR" });
+    return res.redirect("http://localhost:5100/signin?error=server_error");
+  }
+}

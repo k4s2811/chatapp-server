@@ -8,7 +8,7 @@ import { markAsRead } from "../services/conversationService.js";
 const initSocket = (httpServer) => {
     const io = new Server(httpServer, {
         cors: {
-            origin: ["http://localhost:5100"],
+            origin: true,
             credentials: true
         }
     });
