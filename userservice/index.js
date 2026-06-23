@@ -2,12 +2,14 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { ENV_VARS } from "./config/envVars.js";
-import crypto from "crypto";
+import crypto from "node:crypto";
 import pinoHttp from "pino-http";
+import rateLimit from "express-rate-limit";
 import logger from "./utils/logger.js";
 import authRoutes from "./routes/auth.routes.js";
 import pool from "./config/db.js";
 import { errorHandler } from "./middleware/error.middleware.js";
+import { corsOptions } from "./config/cors.js";
 import { migrate } from "./models/migrate.js";
 
 import passport from "passport"; // Keep this
@@ -15,9 +17,22 @@ import "./services/google_auth.js"; // Keep this so the strategy loads
 
 const app = express();
 
-app.use(express.json());
-app.use(cors({ origin: true, credentials: true }));
+// Behind a reverse proxy / docker: trust the first proxy so req.ip and
+// rate-limit keys reflect the real client, not the proxy.
+app.set("trust proxy", 1);
+
+app.use(express.json({ limit: "100kb" }));
+app.use(cors(corsOptions));
 app.use(cookieParser());
+
+// Global rate limiter — blunts scraping / abuse across the whole service.
+app.use(rateLimit({
+  windowMs: ENV_VARS.RATE_LIMIT.windowMs,
+  max: ENV_VARS.RATE_LIMIT.maxRequests,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many requests, please try again later" },
+}));
 
 app.use(pinoHttp({
   logger,
