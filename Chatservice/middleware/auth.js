@@ -18,4 +18,13 @@ const authMiddleware = (req, res, next) => {
     }
 };
 
+// Restrict a route to users whose access-token `role` is in the allowed list.
+// Must run after authMiddleware so req.user is populated.
+export const requireRole = (...roles) => (req, res, next) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+        return res.status(403).json({ success: false, message: "Insufficient permissions" });
+    }
+    next();
+};
+
 export default authMiddleware;

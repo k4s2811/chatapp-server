@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Message from "../models/MessageDb.js";
 import Conversation from "../models/ConversationDb.js";
 import { updateLastMessage } from "../services/conversationService.js"
@@ -60,7 +61,12 @@ export const getMessages = async ({ conversationId, userId, limit = 15, before =
     };
 
     if (before) {
-        const cursorMsg = await Message.findById(before).lean();
+        let cursorMsg = null;
+        if (mongoose.Types.ObjectId.isValid(before)) {
+            cursorMsg = await Message.findById(before).lean();
+        } else {
+            cursorMsg = await Message.findOne({ clientMessageId: before }).lean();
+        }
         if (cursorMsg) {
             query.createdAt = { $lt: cursorMsg.createdAt };
         }

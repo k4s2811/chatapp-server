@@ -38,7 +38,8 @@ const initSocket = (httpServer) => {
         console.log(`[Socket] CONNECTED: User ${userId} (Socket ID: ${socket.id})`);
 
         socket.join(userId);
-        io.emit("user_online", { userId });
+        // bugfix: broadcast to exclude sender — connecting user shouldn't get user_online about themselves
+        socket.broadcast.emit("user_online", { userId });
 
         // JOIN CONVERSATION ROOM
         socket.on("join_conversation", async (conversationId) => {
@@ -72,7 +73,10 @@ const initSocket = (httpServer) => {
                     conversationId, senderId: userId, text, attachments, replyToMessageId, clientMessageId
                 });
 
-                socket.to(`conv:${conversationId}`).emit("new_message", message);
+                // bugfix: io.to instead of socket.to so sender also gets the event
+                // and useConversationStore.handleSocketNewMessage updates the sidebar.
+                // Duplicate is skipped by clientMessageId / _id dedup.
+                io.to(`conv:${conversationId}`).emit("new_message", message);
 
                 if (typeof ack === "function") ack({ success: true, messageId: message._id });
             } catch (err) {
