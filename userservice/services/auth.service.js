@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { query } from "../config/db.js";
 import logger from "../utils/logger.js";
@@ -236,10 +237,30 @@ export const getAllUsersData = async (page = 1, limit = 10, search = '') => {
 
 // --- UPDATE PROFILE ---
 export const updateUserData = async (userId, data) => {
-    const { name, bio, avatar_url } = data;
+    const allowedFields = ["name", "bio", "avatar_url"];
+    const setClauses = [];
+    const values = [];
+    let idx = 1;
+
+    for (const field of allowedFields) {
+        if (data[field] !== undefined) {
+            setClauses.push(`${field} = $${idx++}`);
+            values.push(data[field]);
+        }
+    }
+
+    if (setClauses.length === 0) {
+        const result = await query(
+            `SELECT id, name, bio, avatar_url FROM users WHERE id = $1`,
+            [userId]
+        );
+        return result.rows[0];
+    }
+
+    values.push(userId);
     const result = await query(
-        `UPDATE users SET name = $1, bio = $2, avatar_url = $3 WHERE id = $4 RETURNING id, name, bio, avatar_url`,
-        [name, bio, avatar_url, userId]
+        `UPDATE users SET ${setClauses.join(", ")} WHERE id = $${idx} RETURNING id, name, bio, avatar_url`,
+        values
     );
     return result.rows[0];
 };
