@@ -4,6 +4,27 @@ import Conversation from "../models/ConversationDb.js";
 import * as messageService from "../services/messageService.js";
 import { markAsRead } from "../services/conversationService.js";
 
+const rateLimitStore = new Map();
+
+const rateLimit = (key, maxPerWindow, windowMs) => {
+    const now = Date.now();
+    const entry = rateLimitStore.get(key);
+    if (!entry || now - entry.windowStart > windowMs) {
+        rateLimitStore.set(key, { windowStart: now, count: 1 });
+        return true;
+    }
+    if (entry.count >= maxPerWindow) return false;
+    entry.count++;
+    return true;
+};
+
+// Periodic cleanup of stale rate limit entries
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of rateLimitStore) {
+        if (now - entry.windowStart > 60000) rateLimitStore.delete(key);
+    }
+}, 30000);
 
 const initSocket = (httpServer) => {
     const io = new Server(httpServer, {
@@ -43,6 +64,7 @@ const initSocket = (httpServer) => {
 
         // JOIN CONVERSATION ROOM
         socket.on("join_conversation", async (conversationId) => {
+            if (!rateLimit(`join:${userId}`, 20, 10000)) return;
             try {
                 const conversation = await Conversation.findOne({
                     _id: conversationId,
@@ -66,6 +88,7 @@ const initSocket = (httpServer) => {
 
         // SEND MESSAGE 
         socket.on("send_message", async (payload, ack) => {
+            if (!rateLimit(`msg:${userId}`, 10, 10000)) return;
             try {
                 const { conversationId, text, attachments, replyToMessageId, clientMessageId } = payload;
 
@@ -86,11 +109,13 @@ const initSocket = (httpServer) => {
 
         // TYPING INDICATOR
         socket.on("typing", ({ conversationId, isTyping }) => {
+            if (!rateLimit(`type:${userId}`, 10, 3000)) return;
             socket.to(`conv:${conversationId}`).emit("typing", { userId, conversationId, isTyping });
         });
 
         // READ RECEIPT
         socket.on("mark_read", async ({ conversationId, messageId }) => {
+            if (!rateLimit(`read:${userId}`, 10, 5000)) return;
             try {
                 await markAsRead(conversationId, userId, messageId);
                 io.to(`conv:${conversationId}`).emit("messages_read", {
@@ -103,6 +128,7 @@ const initSocket = (httpServer) => {
 
         // CHECK USER ONLINE STATUS
         socket.on("check_online", async (targetUserId, ack) => {
+            if (!rateLimit(`online:${userId}`, 10, 5000)) return;
             try {
                 const sockets = await io.in(String(targetUserId)).fetchSockets();
                 const online = sockets.length > 0;
