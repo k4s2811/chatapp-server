@@ -3,13 +3,11 @@ import cors from "cors";
 import conversationRoutes from "./routes/conversationRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import adminRoutes from "./routes/admin.routes.js";
-import dns from "node:dns";
-
-dns.setServers(['8.8.8.8', '1.1.1.1']);
+import { corsOptions } from "./config/cors.js";
 
 const app = express();
 
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.get("/health", (_req, res) => res.json({ status: "ok", service: "chat-service" }));

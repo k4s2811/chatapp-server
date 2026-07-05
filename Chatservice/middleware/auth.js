@@ -1,6 +1,8 @@
 import jwt from "jsonwebtoken";
+import { ENV_VARS } from "../config/envVars.js";
+import { isUserActive } from "../services/userStatus.js";
 
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
 
@@ -9,7 +11,13 @@ const authMiddleware = (req, res, next) => {
         }
 
         const token = authHeader.split(" ")[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, ENV_VARS.JWT_ACCESS_SECRET, { issuer: "auth-backend" });
+
+        const userId = decoded.sub || decoded.userId || decoded._id || decoded.id;
+        const active = await isUserActive(userId, token);
+        if (!active) {
+            return res.status(401).json({ success: false, message: "User not found or inactive" });
+        }
 
         req.user = decoded;
         next();
