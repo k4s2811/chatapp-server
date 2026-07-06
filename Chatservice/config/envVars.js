@@ -15,7 +15,7 @@ export const ENV_VARS = {
 	CLIENT_URL,
 	CORS_ORIGINS,
 
-	JWT_ACCESS_SECRET: process.env.ACCESS,
+	JWT_ACCESS_SECRET: process.env.JWT_SECRET,
 	USERSERVICE_URL: process.env.USERSERVICE_URL || "http://userservice:3001",
 };
 

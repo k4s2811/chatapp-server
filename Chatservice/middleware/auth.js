@@ -13,11 +13,11 @@ const authMiddleware = async (req, res, next) => {
         const token = authHeader.split(" ")[1];
         const decoded = jwt.verify(token, ENV_VARS.JWT_ACCESS_SECRET, { issuer: "auth-backend" });
 
-        const userId = decoded.sub || decoded.userId || decoded._id || decoded.id;
-        const active = await isUserActive(userId, token);
-        if (!active) {
-            return res.status(401).json({ success: false, message: "User not found or inactive" });
-        }
+        // const userId = decoded.sub || decoded.userId || decoded._id || decoded.id;
+        // const active = await isUserActive(userId, token);
+        // if (!active) {
+        //     return res.status(401).json({ success: false, message: "User not found or inactive" });
+        // }
 
         req.user = decoded;
         next();
